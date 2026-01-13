@@ -1,26 +1,27 @@
-# Vector base and embeddings
-
+from typing import List, Dict
 import chromadb
 from chromadb.utils import embedding_functions
 
-
-client = chromadb.PersistentClient(path="/content/chroma_db")
-embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="all-MiniLM-L6-v2"
+def get_collection(persist_path: str, collection_name: str, embed_model: str):
+    client = chromadb.PersistentClient(path=persist_path)
+    embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=embed_model
     )
-collection = client.get_or_create_collection(
-    "legal_documents",
-    embedding_function=embedding_fn
+    return client.get_or_create_collection(
+        collection_name,
+        embedding_function=embedding_fn
     )
 
-# -- Delete previous run results if they have
-try:
+def upsert_document(collection, source_name: str, documents: List[str], metadatas: List[Dict]):
+    # Delete old chunks for this source
     collection.delete(where={"source": source_name})
-except Exception:
-    pass
 
-collection.add(
-    documents=[text.page_content for text in split_texts],
-    metadatas=chunk_metadatas,
-    ids=[f"{source_name}_chunk_{i}" for i in range(len(split_texts))]
-)
+    ids = [f"{source_name}_chunk_{i}" for i in range(len(documents))]
+    collection.add(documents=documents, metadatas=metadatas, ids=ids)
+
+def retrieve(collection, query: str, source_name: str, top_k: int):
+    return collection.query(
+        query_texts=[query],
+        n_results=top_k,
+        where={"source": source_name}
+    )
