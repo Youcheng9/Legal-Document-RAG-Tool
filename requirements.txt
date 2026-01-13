@@ -1,0 +1,22 @@
+# --- Core API ---
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+
+# --- PDF processing ---
+pymupdf
+
+# --- NLP / embeddings ---
+sentence-transformers
+spacy
+langchain-text-splitters
+
+# --- Vector database ---
+chromadb
+
+# --- LLM client ---
+ollama
+
+# --- Optional UI ---
+streamlit
