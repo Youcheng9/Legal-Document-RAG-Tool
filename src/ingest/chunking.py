@@ -1,6 +1,6 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import List, Dict
-from
+
 def validate_chunks(all_texts: List[Dict],
                     chunk_size: int = 1000,
                     chunk_overlap: int = 200) -> tuple:
@@ -43,4 +43,4 @@ def validate_chunks(all_texts: List[Dict],
     print(f"Created {len(split_texts)} valid chunks")
     return split_texts, chunk_metadatas
 
-split_texts, chunk_metadatas = validate_chunks(all_text)
+# split_texts, chunk_metadatas = validate_chunks(all_text)

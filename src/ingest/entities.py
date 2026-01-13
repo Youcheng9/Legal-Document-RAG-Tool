@@ -1,5 +1,5 @@
 from typing import List, Dict
-from './pdf_loader.py' import load_pdf_and_texts
+from "./pdf_loader.py" import load_pdf_and_texts
 import spacy
 
 def extract_entities(all_text: List[Dict]) -> Dict:
@@ -29,9 +29,8 @@ def extract_entities(all_text: List[Dict]) -> Dict:
   # Convert set back to sorted list
   return {k: sorted(list(v)) for k, v in target_entities.items()}
 
+# target_entities = extract_entities(all_text)
 
-target_entities = extract_entities(all_text)
 
-
-for entity_type, entities in target_entities.items():
-    print(f"{entity_type}: {entities}")
+# for entity_type, entities in target_entities.items():
+#     print(f"{entity_type}: {entities}")
