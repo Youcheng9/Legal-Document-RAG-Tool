@@ -1,5 +1,4 @@
 from typing import List, Dict
-from "./pdf_loader.py" import load_pdf_and_texts
 import spacy
 
 def extract_entities(all_text: List[Dict]) -> Dict:
