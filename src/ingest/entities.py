@@ -1,9 +1,12 @@
 from typing import List, Dict
 import spacy
 
-def extract_entities(all_text: List[Dict]) -> Dict:
-  nlp = spacy.load("en_core_web_sm")
 
+nlp = spacy.load("en_core_web_sm")
+
+
+def extract_entities(all_text: List[Dict]) -> Dict:
+  
   target_entities = {
       "PERSON": set(),
       "ORG": set(),
@@ -13,20 +16,24 @@ def extract_entities(all_text: List[Dict]) -> Dict:
       "LAW": set(), # Legal reference
   }
 
-  texts = [p["text"] for p in all_text]
+  texts = [p.get("text", "") for p in all_text if p.get("text")]
 
-  # Batch processing using nlp.pipe, much faster
-  for doc in nlp.pipe(texts, batch_size=50, n_process=1):
+  if not texts:
+    return {k: [] for k in target_entities.keys()}
+  
+  for doc in nlp.pipe(texts, batch_size=50):
+
     for ent in doc.ents:
-      # Corrected: Use ent.label_ instead of ent.labels
-      if ent.label_ in target_entities:
-        # Clean entity text
-        cleaned = ent.text.strip()
-        if cleaned and len(cleaned) > 1:
-          target_entities[ent.label_].add(cleaned) # Use add for sets
+      label = ent.label_
 
-  # Convert set back to sorted list
-  return {k: sorted(list(v)) for k, v in target_entities.items()}
+      if label in target_entities:
+        cleaned = ent.text.strip()
+        
+        if cleaned and len(cleaned) > 1:
+          target_entities[ent.label_].add(cleaned) 
+
+
+  return {label: list(entities) for label, entities in target_entities.items()}
 
 # target_entities = extract_entities(all_text)
 

@@ -14,7 +14,10 @@ def get_collection(persist_path: str, collection_name: str, embed_model: str):
 
 def upsert_document(collection, source_name: str, documents: List[str], metadatas: List[Dict]):
     # Delete old chunks for this source
-    collection.delete(where={"source": source_name})
+    try:
+            collection.delete(where={"source": source_name})
+    except Exception:
+        pass  # nothing to delete or backend behavior difference
 
     ids = [f"{source_name}_chunk_{i}" for i in range(len(documents))]
     collection.add(documents=documents, metadatas=metadatas, ids=ids)
