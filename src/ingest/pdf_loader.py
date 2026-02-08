@@ -1,8 +1,8 @@
 import pymupdf
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Optional
 import os
 
-def load_pdf_and_texts(file_path: str) -> Tuple[List[Dict], str]:
+def load_pdf_and_texts(file_path: str, source_name: Optional[str] = None) -> Tuple[List[Dict], str]:
   try:
 
     # File does not exist
@@ -15,7 +15,7 @@ def load_pdf_and_texts(file_path: str) -> Tuple[List[Dict], str]:
       if len(doc) == 0:
         raise ValueError("PDF has no pages")
 
-      source_name = os.path.basename(file_path)
+      actual_source = source_name or os.path.basename(file_path)
       all_text = []
 
       for page_idx, page in enumerate(doc, start=1):
@@ -26,15 +26,12 @@ def load_pdf_and_texts(file_path: str) -> Tuple[List[Dict], str]:
           all_text.append({
               "page": page_idx,
               "text": text,
-              "source": source_name
+              "source": actual_source
           })
 
       print(f"Loaded {len(doc)} pages from {source_name}")
-      return all_text, source_name # Moved outside the loop
+      return all_text, actual_source # Moved outside the loop
 
   except Exception as e:
       print(f"Error loading PDF: {e}")
       raise
-
-# all_text, source_name = load_pdf_and_texts(drive_path)
-# print("\n",json.dumps(all_text, indent=2))
