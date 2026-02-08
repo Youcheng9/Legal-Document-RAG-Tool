@@ -1,12 +1,56 @@
+
 # Python-generated files
 __pycache__/
-*.py[oc]
+*.py[cod]
+*.pyo
+*.pyd
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+.eggs/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+ENV/
 
-# .env.example
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Vector stores / databases (DO NOT COMMIT)
+data/chroma/
+data/chroma/**
+chroma_db/
+*.sqlite3
+*.db
+
+# Uploaded / ingested documents
+uploads/
+data/uploads/
+*.pdf
+
+# RAG artifacts / eval outputs
+evals/results/
+evals/*.json
+evals/*.jsonl
+evals/*.csv
+
+# Logs & runtime artifacts
+logs/
+*.log
+*.out
+*.err
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test caches
+.pytest_cache/
+.coverage
+htmlcov/
