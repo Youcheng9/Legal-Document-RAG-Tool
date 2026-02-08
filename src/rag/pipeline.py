@@ -1,10 +1,11 @@
-import os
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, Optional
+from pathlib import Path
 
 from src.ingest.pdf_loader import load_pdf_and_texts
 from src.ingest.chunking import validate_chunks
 from src.ingest.entities import extract_entities
 from src.rag.prompts import generate_prompt
+from src.config import CHROMA_DIR, EMBED_MODEL, COLLECTION_NAME, OLLAMA_MODEL, CHUNK_SIZE, CHUNK_OVERLAP, UPLOADS_DIR
 
 # vectorstore helper functions (from your file)
 from src.vectorstore.chroma_store import get_collection, upsert_document, retrieve
@@ -54,25 +55,38 @@ _ollama_chat = _load_ollama_chat()
 
 class RagPipeline:
     def __init__(self,
-                 chroma_persist_dir: Optional[str] = None,
-                 collection_name: Optional[str] = None,
-                 embed_model: Optional[str] = None,
-                 ollama_model: Optional[str] = None):
+                chroma_persist_dir: Optional[Path] = None,
+                collection_name: Optional[str] = None,
+                embed_model: Optional[str] = None,
+                ollama_model: Optional[str] = None,
+                uploads_dir: Optional[Path] = None,  # add this
+                chunk_size: Optional[int] = None,    # add this
+                chunk_overlap: Optional[int] = None, # add this
+    ):
     
-        self.chroma_persist_dir = chroma_persist_dir or os.getenv("CHROMA_PERSIST_DIR", "./data/chroma")
-        self.collection_name = collection_name or os.getenv("COLLECTION_NAME", "legal_docs")
-        self.embed_model = embed_model or os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-        self.ollama_model = ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        self.chroma_persist_dir = chroma_persist_dir or CHROMA_DIR
+        self.uploads_dir = uploads_dir or UPLOADS_DIR
+        self.collection_name = collection_name or COLLECTION_NAME
+        self.embed_model = embed_model or EMBED_MODEL
+        self.ollama_model = ollama_model or OLLAMA_MODEL
+        self.chunk_size = chunk_size or CHUNK_SIZE
+        self.chunk_overlap = chunk_overlap or CHUNK_OVERLAP
 
         # Create / open collection (Chroma handles embedding function internally)
-        self.collection = get_collection(self.chroma_persist_dir, self.collection_name, self.embed_model)
+        self.collection = get_collection(str(self.chroma_persist_dir), self.collection_name, self.embed_model)
+
 
     # -----------------------
     # Ingestion
     # -----------------------
     def ingest_file_id(self, file_id: str, force: bool = False) -> Dict:
       
-        pdf_path = os.path.join("data", "uploads", f"{file_id}.pdf")
+        pdf_path = self.uploads_dir / f"{file_id}.pdf"
+
+        # Error handling for not exisiting PDFs
+        if not pdf_path.exists():
+            raise FileNotFoundError(f"PDF not found for file_id={file_id}: {pdf_path}")
+
         pages, _ = load_pdf_and_texts(pdf_path)  # May raise FileNotFoundError / ValueError
         source_name = file_id
         
@@ -87,7 +101,10 @@ class RagPipeline:
             })
 
         # Chunking
-        split_texts, chunk_metadatas = validate_chunks(all_texts, chunk_size=1000, chunk_overlap=200)
+        split_texts, chunk_metadatas = validate_chunks(
+            all_texts, 
+            chunk_size=self.chunk_size, 
+            chunk_overlap=self.chunk_overlap)
 
         # If no chunks extracted, return info denoting that
         if not split_texts:
