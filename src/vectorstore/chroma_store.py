@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 import chromadb
 from chromadb.utils import embedding_functions
 
@@ -22,9 +22,14 @@ def upsert_document(collection, source_name: str, documents: List[str], metadata
     ids = [f"{source_name}_chunk_{i}" for i in range(len(documents))]
     collection.add(documents=documents, metadatas=metadatas, ids=ids)
 
-def retrieve(collection, query: str, source_name: str, top_k: int):
-    return collection.query(
-        query_texts=[query],
-        n_results=top_k,
-        where={"source": source_name}
-    )
+def retrieve(collection, query: str, source_name: Optional[str], top_k: int):
+    query_kwargs = {
+        "query_texts": [query],
+        "n_results": top_k,
+    }
+
+    # Only filter if a specific source is provided
+    if source_name:
+        query_kwargs["where"] = {"source": source_name}
+
+    return collection.query(**query_kwargs)
