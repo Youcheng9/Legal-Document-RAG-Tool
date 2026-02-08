@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 
@@ -16,11 +16,23 @@ class IngestResponse(BaseModel):
 
 
 class SourceItem(BaseModel):
-    id: Optional[str] = None
-    source: Optional[str] = None
-    page: Optional[int] = None
-    text: Optional[str] = None
-    score: Optional[float] = None
+    # For traceability + citations
+    chunk_id: Optional[str] = None
+    file_id: Optional[str] = None          # UUID doc key (source_name)
+    filename: Optional[str] = None         # Optional: only if you store it somewhere
+
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+
+    snippet: Optional[str] = None   # What you show in the UI (avoid returning full chunk text)
+
+    score: Optional[float] = None  # Retrieval score (if available)
+
+
+class QueryRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+    file_id: Optional[str] = None
+    top_k: int = 8
 
 
 class QueryResponse(BaseModel):
@@ -29,7 +41,6 @@ class QueryResponse(BaseModel):
     retrieved: int
 
 
-# Optional: for standardized errors if you want to return structured errors
 class ErrorResponse(BaseModel):
     detail: str
     extra: Optional[Dict[str, Any]] = None
