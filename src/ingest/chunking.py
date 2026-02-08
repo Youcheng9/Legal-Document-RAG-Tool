@@ -88,6 +88,8 @@ def validate_chunks(
             metadata = {
                 "source": source,
                 "page": page_no,
+                "page_start": page_no,
+                "page_end": page_no,
                 "chunk_length": len(content),
                 "word_count": len(content.split()),
                 "chunk_index": chunk_index,
