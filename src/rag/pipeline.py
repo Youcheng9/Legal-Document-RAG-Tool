@@ -1,10 +1,11 @@
 import os
-from typing import List, Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from src.ingest.pdf_loader import load_pdf_and_texts
 from src.ingest.chunking import validate_chunks
 from src.ingest.entities import extract_entities
 from src.rag.prompts import generate_prompt
+from src.config import CHROMA_DIR, COLLECTION_NAME, EMBED_MODEL, OLLAMA_MODEL, UPLOADS_DIR
 
 # vectorstore helper functions (from your file)
 from src.vectorstore.chroma_store import get_collection, upsert_document, retrieve
@@ -59,10 +60,10 @@ class RagPipeline:
                  embed_model: Optional[str] = None,
                  ollama_model: Optional[str] = None):
     
-        self.chroma_persist_dir = chroma_persist_dir or os.getenv("CHROMA_PERSIST_DIR", "./data/chroma")
-        self.collection_name = collection_name or os.getenv("COLLECTION_NAME", "legal_docs")
-        self.embed_model = embed_model or os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-        self.ollama_model = ollama_model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        self.chroma_persist_dir = chroma_persist_dir or str(CHROMA_DIR)
+        self.collection_name = collection_name or COLLECTION_NAME
+        self.embed_model = embed_model or EMBED_MODEL
+        self.ollama_model = ollama_model or OLLAMA_MODEL
 
         # Create / open collection (Chroma handles embedding function internally)
         self.collection = get_collection(self.chroma_persist_dir, self.collection_name, self.embed_model)
@@ -72,8 +73,8 @@ class RagPipeline:
     # -----------------------
     def ingest_file_id(self, file_id: str, force: bool = False) -> Dict:
       
-        pdf_path = os.path.join("data", "uploads", f"{file_id}.pdf")
-        pages, _ = load_pdf_and_texts(pdf_path)  # May raise FileNotFoundError / ValueError
+        pdf_path = str(UPLOADS_DIR / f"{file_id}.pdf")
+        pages, _ = load_pdf_and_texts(pdf_path,source_name=file_id)  # May raise FileNotFoundError / ValueError
         source_name = file_id
         
 
@@ -125,16 +126,34 @@ class RagPipeline:
         ids = raw.get("ids", [[]])[0]
         distances = raw.get("distances", [[]])[0]  # lower distance = more similar (depends on metric)
 
+        # Hallucination guard 1: nothing retrieved
+        if not docs:
+            return {
+                "answer": "I could not find this information in the provided document(s).",
+                "sources": [],
+                "retrieved": 0,
+            }
+
+        # Hallucination guard 2: retrieved but very weak
+        if distances and min(distances) > 0.9:
+            return {
+                "answer": "I could not find this information in the provided document(s).",
+                "sources": [],
+                "retrieved": 0,
+            }
+        
         # Build a flat list of candidate chunks
         candidates = []
         for i in range(len(docs)):
             meta = metadatas[i] if i < len(metadatas) else {}
+            dist = distances[i] if distances and i < len(distances) else None
+
             candidates.append({
                 "id": ids[i] if i < len(ids) else None,
                 "source": meta.get("source", None),
                 "page": meta.get("page", None),
                 "text": docs[i],
-                "score": (1.0 - distances[i]) if distances and i < len(distances) and distances[i] is not None else None,
+                "distance": dist,
             })
 
         context_parts = []
@@ -158,11 +177,16 @@ class RagPipeline:
         sources_out = []
         for c in candidates:
             sources_out.append({
-                "id": c.get("id"),
-                "source": c.get("source"),
-                "page": c.get("page"),
-                "text": (c.get("text")[:600] + "...") if c.get("text") and len(c.get("text")) > 600 else c.get("text"),
-                "score": c.get("score"),
+                "chunk_id": c.get("id"),
+                "file_id": c.get("source"),
+                "page_start": c.get("page"),
+                "page_end": c.get("page"),
+                "snippet": (
+                    c.get("text")[:600] + "..."
+                    if c.get("text") and len(c.get("text")) > 600
+                    else c.get("text")
+                ),
+                "score": c.get("distance"),
             })
 
         return {
